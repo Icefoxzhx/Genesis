@@ -146,7 +146,7 @@ class SPHEntity(ParticleEntity):
         poss = self._sanitize_particles_tensor((3,), gs.tc_float, poss, particles_idx_local, envs_idx)
         self.solver._kernel_set_particles_pos(particles_idx_local + self._particle_start, envs_idx, poss)
 
-    def get_position(self, envs_idx=None, *, unsafe=False):
+    def get_particles_pos(self, envs_idx=None, *, unsafe=False):
         envs_idx = self._scene._sanitize_envs_idx(envs_idx, unsafe=unsafe)
         poss = torch.empty((len(envs_idx), self.n_particles, 3), dtype=gs.tc_float, device=gs.device)
         self.solver._kernel_get_particles_pos(self._particle_start, self.n_particles, envs_idx, poss)
