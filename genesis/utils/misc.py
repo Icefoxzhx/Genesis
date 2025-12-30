@@ -478,7 +478,10 @@ def ti_to_python(
                     ti.sync()
 
                 # "Cache" no-owning python-side views of the original GsTaichi memory buffer as a hidden attribute
-                value_tc = torch.utils.dlpack.from_dlpack(value.to_dlpack())
+                if issubclass(data_type, ti.Field):
+                    value_tc = value.to_torch()
+                else:
+                    value_tc = torch.utils.dlpack.from_dlpack(value.to_dlpack())
                 if issubclass(data_type, ti.MatrixField) and value.m == 1:
                     value_tc = value_tc.reshape((*batch_shape, value.n))
                 value._tc = value_tc
