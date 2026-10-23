@@ -1,5 +1,5 @@
 import math
-from typing import Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 import numpy as np
 
@@ -70,7 +70,10 @@ class Surface(Options):
     normal_diff_clamp : float, optional
         Controls the threshold for computing surface normals by interpolating vertex normals.
     recon_backend : str, optional
-        Backend for surface reconstruction. Possible values are ['splashsurf', 'openvdb']. Defaults to 'splashsurf'.
+        Backend for surface reconstruction, 'splashsurf' or 'openvdb', optionally followed by '-<radius scale>' and
+        '-<key>-<value>' pairs, e.g. 'splashsurf-1.5-smooth-25'. The keys are 'smooth' for splashsurf (mesh smoothing
+        iterations) and 'vscale', 'isovalue' and 'adaptivity' for openvdb. A larger radius scale or more smoothing gives
+        a smoother surface that merges nearby particles and loses fine detail. Defaults to 'splashsurf'.
     generate_foam : bool, optional
         Whether to generate foam particles for visual effects for particle-based entities.
     foam_options : gs.options.FoamOptions, optional
@@ -93,7 +96,9 @@ class Surface(Options):
     double_sided: StrictBool | None = None
     cutoff: float = 180.0
     normal_diff_clamp: float = 180.0
-    recon_backend: Literal["splashsurf", "openvdb"] = "splashsurf"
+    recon_backend: Annotated[str, Field(pattern=r"^(splashsurf|openvdb)(-\d+(\.\d+)?(-[a-z]+-\d+(\.\d+)?)*)?$")] = (
+        "splashsurf"
+    )
     generate_foam: StrictBool = False
     foam_options: FoamOptions = Field(default_factory=FoamOptions)
 
