@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 
 import numpy as np
 
@@ -371,19 +371,14 @@ def particles_to_mesh(positions, radius, backend):
         return trimesh.Trimesh(vertices, faces, process=False)
     elif "splashsurf" in backend:
         # FIXME: Running in subprocess or manually reclaiming free-ed head memory is necessary to avoid unbounded growth
+        # The worker runs in-process on every platform. Starting a subprocess with 'spawn' (the default outside Linux)
+        # re-imports the '__main__' module of the caller, which re-runs any script lacking a main guard, and forking a
+        # process that initialized Metal is unsafe. pysplashsurf frees its own memory, so only glibc needs a trim.
         result_queue = Queue()
+        _splashsurf_worker(positions, radius, args_dict, result_queue)
         if malloc_trim is not None:
-            _splashsurf_worker(positions, radius, args_dict, result_queue)
-            result = result_queue.get()
             malloc_trim(0)
-        else:
-            proc = Process(target=_splashsurf_worker, args=(positions, radius, args_dict, result_queue))
-            proc.start()
-            result = result_queue.get()
-            proc.join()
-            if proc.exitcode != 0:
-                gs.raise_exception_from(f"splashsurf subprocess failed with exit code {proc.exitcode}", result)
-        vertices, triangles, normals = result
+        vertices, triangles, normals = result_queue.get()
         mesh = trimesh.Trimesh(vertices=vertices, faces=triangles, face_normals=normals, process=False)
         gs.logger.debug(f"[splashsurf]: reconstruct vertices: {mesh.vertices.shape}, {mesh.faces.shape}")
         return mesh
