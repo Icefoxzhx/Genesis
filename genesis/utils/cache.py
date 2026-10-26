@@ -29,6 +29,9 @@ WTH_CACHE_VERSION = 2
 # Bumped when the particles sampled for a fixed key change or when the layout of an entry does: forces a cache miss on
 # stale entries.
 PTC_CACHE_VERSION = 2
+# Bumped when the decomposition of a fixed key changes or when the layout of an entry does: forces a cache miss on stale
+# entries.
+CVX_CACHE_VERSION = 1
 
 
 def get_cache_dir():
@@ -305,7 +308,7 @@ def get_gnd_path(
 
 
 def get_cvx_cache(verts, faces, coacd_options):
-    return MeshCache(get_cvx_cache_dir(), "cvx", verts, faces, coacd_options.__dict__)
+    return MeshCache(get_cvx_cache_dir(), "cvx", verts, faces, coacd_options.__dict__, CVX_CACHE_VERSION)
 
 
 def get_ptc_cache(verts, faces, p_size, sampler, random_state):

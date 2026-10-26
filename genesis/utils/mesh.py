@@ -297,31 +297,21 @@ def surface_uvs_to_trimesh_visual(surface, uvs=None, n_verts=None):
 
 
 def convex_decompose(mesh, coacd_options):
-    # The decomposition of a scaled mesh is the decomposition of the mesh scaled, so the cache is keyed on vertices
-    # normalized by the mesh scale and the hulls are rescaled on the way out: every scaled copy of an asset shares a
-    # single entry.
-    mesh_scale = float(np.linalg.norm(mesh.extents))
-    assert not (np.isinf(mesh_scale) or np.isnan(mesh_scale) or mesh_scale <= 0.0)
-    cache = get_cvx_cache(mesh.vertices / mesh_scale, mesh.faces, coacd_options)
+    # A linear map preserves convexity, so stretching the parts of a decomposition along the axes gives a decomposition
+    # of the mesh stretched the same way. The decomposition runs on the vertices normalized by the extent of the mesh
+    # along each axis, which keys the cache, and the parts are stretched back on the way out: every axis-aligned
+    # rescaling of an asset, uniform or not, shares a single entry and the same decomposition whatever the cache holds.
+    mesh_extents = mesh.extents
+    assert np.isfinite(mesh_extents).all() and (mesh_extents > 0.0).all()
+    normalized_verts = mesh.vertices / mesh_extents
+    cache = get_cvx_cache(normalized_verts, mesh.faces, coacd_options)
 
-    # loading pre-computed cache if available
-    is_cached_loaded = False
-    loaded_cache = cache.load()
-    if loaded_cache is not None:
+    mesh_parts = cache.load()
+    if mesh_parts is not None:
         gs.logger.debug("Convex decomposition file (.cvx) found in cache.")
-        mesh_parts = loaded_cache["mesh_parts"]
-        cached_mesh_scale = loaded_cache["mesh_scale"]
-
-        # rescale loaded mesh parts
-        if not (np.isinf(cached_mesh_scale) or np.isnan(cached_mesh_scale) or cached_mesh_scale <= 0.0):
-            rescale_factor = mesh_scale / cached_mesh_scale
-            for mesh_part in mesh_parts:
-                mesh_part.vertices *= rescale_factor
-            is_cached_loaded = True
-
-    if not is_cached_loaded:
+    else:
         with gs.logger.timer("Running convex decomposition."):
-            mesh = coacd.Mesh(mesh.vertices, mesh.faces)
+            mesh = coacd.Mesh(normalized_verts, mesh.faces)
             args = coacd_options
             result = coacd.run_coacd(
                 mesh,
@@ -342,12 +332,10 @@ def convex_decompose(mesh, coacd_options):
                 apx_mode=args.apx_mode,
                 seed=args.seed,
             )
-            mesh_parts = []
-            for vs, fs in result:
-                mesh_parts.append(trimesh.Trimesh(vs, fs))
-            cache.save({"mesh_parts": mesh_parts, "mesh_scale": mesh_scale})
+            mesh_parts = [trimesh.Trimesh(vs, fs) for vs, fs in result]
+            cache.save(mesh_parts)
 
-    return mesh_parts
+    return [trimesh.Trimesh(mesh_part.vertices * mesh_extents, mesh_part.faces) for mesh_part in mesh_parts]
 
 
 # 512 MiB of processed collision geometry. Sized by the geometry footprint actually retained (vertices and faces of

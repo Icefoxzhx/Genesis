@@ -951,8 +951,8 @@ def test_splashsurf_surface_reconstruction(show_viewer):
 @pytest.mark.cache(False)
 # @pytest.mark.required
 def test_convex_decompose_cache(monkeypatch, asset_tmp_path):
-    # A single decomposition must serve every mesh describing the same shape, whatever its placement: rescaled copies,
-    # and re-exports of the model whose coordinates differ only in their last significant digits.
+    # A single decomposition must serve every mesh describing the same shape, whatever its placement: copies rescaled
+    # uniformly or along each axis, and re-exports of the model whose coordinates differ only in their last digits.
     n_coacd_runs = 0
     real_run_coacd = coacd.run_coacd
 
@@ -987,10 +987,10 @@ def test_convex_decompose_cache(monkeypatch, asset_tmp_path):
     reexported_path = str(asset_tmp_path / "duck_stretched_reexported.obj")
     reexported.export(reexported_path)
 
-    SCALES = (2.0, 4.0, 8.0)
-    files = (authored_path, authored_path, reexported_path)
-    POSES = ((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0))
-    QUATS = ((0.0, 0.0, 0.0, 1.0), (1.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0))
+    SCALES = (2.0, 4.0, 8.0, (2.0, 6.0, 3.0))
+    files = (authored_path, authored_path, reexported_path, authored_path)
+    POSES = ((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0), (1.0, 1.0, 1.0))
+    QUATS = ((0.0, 0.0, 0.0, 1.0), (1.0, 0.0, 0.0, 0.0), (0.0, 1.0, 0.0, 0.0), (0.0, 0.0, 1.0, 0.0))
     for file, scale, pos, quat in zip(files, SCALES, POSES, QUATS):
         scene = gs.Scene(show_viewer=False)
         scene.add_entity(
@@ -1011,5 +1011,5 @@ def test_convex_decompose_cache(monkeypatch, asset_tmp_path):
     for scale, parts in zip(SCALES[1:], seen_results[1:]):
         assert len(parts) == len(cached_parts)
         for part, cached_part in zip(parts, cached_parts):
-            assert_allclose(part.vertices, cached_part.vertices * (scale / SCALES[0]), rtol=1e-6)
+            assert_allclose(part.vertices, cached_part.vertices * np.divide(scale, SCALES[0]), rtol=1e-6)
             assert_equal(part.faces, cached_part.faces)
