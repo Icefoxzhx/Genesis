@@ -1141,7 +1141,7 @@ class RasterizerContext:
         self._t = self.scene._t
 
         # Remove up old dynamic nodes
-        self.clear_dynamic_nodes(only_outdated=True)
+        self.clear_dynamic_nodes(only_outdated=False)
 
         # Force updating rendering-only quantities that are not updated automatically during simulation
         self.visualizer.update_visual_states(force_render)
